@@ -42,6 +42,14 @@ def init_database():
             {"symbol": "688234.SH", "name": "天岳先进", "market": "sh", "sector": "semiconductor", "sub_sector": "碳化硅材料", "total_shares": 440000000},
             {"symbol": "688581.SH", "name": "富乐德", "market": "sh", "sector": "semiconductor", "sub_sector": "陶瓷材料", "total_shares": 350000000},
 
+            # === 半导体 - 存储芯片 (6只) ===
+            {"symbol": "603986.SH", "name": "兆易创新", "market": "sh", "sector": "semiconductor", "sub_sector": "存储芯片", "total_shares": 667000000, "is_hot": True},
+            {"symbol": "688525.SH", "name": "佰维存储", "market": "sh", "sector": "semiconductor", "sub_sector": "存储芯片", "total_shares": 430000000},
+            {"symbol": "301308.SZ", "name": "江波龙", "market": "sz", "sector": "semiconductor", "sub_sector": "存储模组", "total_shares": 413000000},
+            {"symbol": "688766.SH", "name": "普冉股份", "market": "sh", "sector": "semiconductor", "sub_sector": "NOR Flash", "total_shares": 76000000},
+            {"symbol": "688110.SH", "name": "东芯股份", "market": "sh", "sector": "semiconductor", "sub_sector": "存储芯片", "total_shares": 442000000},
+            {"symbol": "688416.SH", "name": "恒烁股份", "market": "sh", "sector": "semiconductor", "sub_sector": "NOR Flash", "total_shares": 83000000},
+
             # === 半导体 - 芯片设计 (9只) ===
             {"symbol": "603501.SH", "name": "韦尔股份", "market": "sh", "sector": "semiconductor", "sub_sector": "芯片设计", "total_shares": 1200000000},
             {"symbol": "688008.SH", "name": "澜起科技", "market": "sh", "sector": "semiconductor", "sub_sector": "内存接口芯片", "total_shares": 1140000000},
