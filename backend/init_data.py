@@ -189,7 +189,7 @@ def init_database():
                 # 偿债能力指标 (4个)
                 current_ratio=round(random.uniform(1.0, 3.0), 2),
                 quick_ratio=round(random.uniform(0.6, 2.5), 2),
-                debt_ratio=round(random.uniform(30, 65), 2),
+                debt_to_equity=round(random.uniform(0.3, 0.65), 2),
                 interest_coverage=round(random.uniform(3, 20), 2),
             )
             db.add(indicator)

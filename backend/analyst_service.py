@@ -312,7 +312,7 @@ class SimulationService:
 
         # 基于财务数据的风险提示
         if indicator:
-            if hasattr(indicator, 'debt_ratio') and indicator.debt_ratio and indicator.debt_ratio > 60:
+            if hasattr(indicator, 'debt_to_equity') and indicator.debt_to_equity and indicator.debt_to_equity > 0.6:
                 warnings.append("负债率偏高，需关注财务风险")
             if hasattr(indicator, 'revenue_growth_3y') and indicator.revenue_growth_3y and indicator.revenue_growth_3y < 10:
                 warnings.append("营收增速放缓，成长性存疑")
@@ -462,7 +462,7 @@ class StockService:
             # 偿债能力指标
             result["current_ratio"] = getattr(indicator, 'current_ratio', None)  # 流动比率
             result["quick_ratio"] = getattr(indicator, 'quick_ratio', None)  # 速动比率
-            result["debt_ratio"] = getattr(indicator, 'debt_ratio', None)  # 资产负债率
+            result["debt_ratio"] = round(indicator.debt_to_equity * 100, 2) if indicator and indicator.debt_to_equity else None  # 资产负债率(%)
             result["interest_coverage"] = getattr(indicator, 'interest_coverage', None)  # 利息保障倍数
 
             # 其他指标

@@ -1,7 +1,7 @@
 """
 TechInsight Pro - 数据模型
 """
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Date, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Date, Text, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -29,15 +29,17 @@ class Stock(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    quote = relationship("StockQuote", back_populates="stock", uselist=False)
-    indicators = relationship("FinancialIndicator", back_populates="stock")
+    quote = relationship("StockQuote", back_populates="stock", uselist=False,
+                         foreign_keys="StockQuote.symbol", primaryjoin="Stock.symbol == StockQuote.symbol")
+    indicators = relationship("FinancialIndicator", back_populates="stock",
+                              foreign_keys="FinancialIndicator.symbol", primaryjoin="Stock.symbol == FinancialIndicator.symbol")
 
 class StockQuote(Base):
     """股票实时行情"""
     __tablename__ = "stock_quotes"
     
     id = Column(Integer, primary_key=True, index=True)
-    symbol = Column(String(20), unique=True, index=True, nullable=False)
+    symbol = Column(String(20), ForeignKey("stocks.symbol"), unique=True, index=True, nullable=False)
     current_price = Column(Float)
     open_price = Column(Float)
     high_price = Column(Float)
@@ -56,7 +58,7 @@ class FinancialIndicator(Base):
     __tablename__ = "financial_indicators"
     
     id = Column(Integer, primary_key=True, index=True)
-    symbol = Column(String(20), index=True, nullable=False)
+    symbol = Column(String(20), ForeignKey("stocks.symbol"), index=True, nullable=False)
     report_date = Column(Date)
     
     # 估值指标
