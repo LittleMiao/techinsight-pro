@@ -1,5 +1,5 @@
 """
-初始化数据库数据 - 包含博主框架示例
+初始化数据库数据 - 包含博主框架示例和扩展的科技板块股票
 """
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base
@@ -18,38 +18,98 @@ def init_database():
         
         print("开始初始化数据库...")
         
-        # 1. 创建股票基础数据
+        # 1. 创建扩展的股票基础数据（50+只科技板块股票）
         stocks_data = [
+            # 半导体 - 晶圆代工
             {"symbol": "688981.SH", "name": "中芯国际", "market": "sh", "sector": "semiconductor", "sub_sector": "晶圆代工", "total_shares": 7900000000, "is_hot": True},
+            {"symbol": "688396.SH", "name": "华润微", "market": "sh", "sector": "semiconductor", "sub_sector": "晶圆代工", "total_shares": 1320000000},
+            
+            # 半导体 - 设备
             {"symbol": "002371.SZ", "name": "北方华创", "market": "sz", "sector": "semiconductor", "sub_sector": "半导体设备", "total_shares": 530000000, "is_hot": True},
+            {"symbol": "688012.SH", "name": "中微公司", "market": "sh", "sector": "semiconductor", "sub_sector": "刻蚀设备", "total_shares": 618000000},
+            {"symbol": "688082.SH", "name": "盛美上海", "market": "sh", "sector": "semiconductor", "sub_sector": "清洗设备", "total_shares": 433000000},
+            {"symbol": "300316.SZ", "name": "晶盛机电", "market": "sz", "sector": "semiconductor", "sub_sector": "硅片设备", "total_shares": 1300000000},
+            {"symbol": "688037.SH", "name": "芯源微", "market": "sh", "sector": "semiconductor", "sub_sector": "涂胶显影设备", "total_shares": 136000000},
+            
+            # 半导体 - 材料
+            {"symbol": "688126.SH", "name": "沪硅产业", "market": "sh", "sector": "semiconductor", "sub_sector": "硅片材料", "total_shares": 2730000000},
+            {"symbol": "300655.SZ", "name": "晶瑞电材", "market": "sz", "sector": "semiconductor", "sub_sector": "电子化学品", "total_shares": 580000000},
+            {"symbol": "688019.SH", "name": "安集科技", "market": "sh", "sector": "semiconductor", "sub_sector": "抛光材料", "total_shares": 99000000},
+            
+            # 半导体 - 芯片设计
             {"symbol": "603501.SH", "name": "韦尔股份", "market": "sh", "sector": "semiconductor", "sub_sector": "芯片设计", "total_shares": 1200000000},
+            {"symbol": "688008.SH", "name": "澜起科技", "market": "sh", "sector": "semiconductor", "sub_sector": "内存接口芯片", "total_shares": 1140000000},
+            {"symbol": "300782.SZ", "name": "卓胜微", "market": "sz", "sector": "semiconductor", "sub_sector": "射频芯片", "total_shares": 534000000},
+            {"symbol": "688099.SH", "name": "晶晨股份", "market": "sh", "sector": "semiconductor", "sub_sector": "SoC芯片", "total_shares": 416000000},
+            {"symbol": "603893.SH", "name": "瑞芯微", "market": "sh", "sector": "semiconductor", "sub_sector": "SoC芯片", "total_shares": 418000000},
+            {"symbol": "688595.SH", "name": "芯海科技", "market": "sh", "sector": "semiconductor", "sub_sector": "模拟芯片", "total_shares": 142000000},
+            {"symbol": "300661.SZ", "name": "圣邦股份", "market": "sz", "sector": "semiconductor", "sub_sector": "模拟芯片", "total_shares": 471000000},
+            {"symbol": "688536.SH", "name": "思瑞浦", "market": "sh", "sector": "semiconductor", "sub_sector": "信号链芯片", "total_shares": 132000000},
+            
+            # 半导体 - 封测
+            {"symbol": "600584.SH", "name": "长电科技", "market": "sh", "sector": "semiconductor", "sub_sector": "封装测试", "total_shares": 1780000000},
+            {"symbol": "002156.SZ", "name": "通富微电", "market": "sz", "sector": "semiconductor", "sub_sector": "封装测试", "total_shares": 1510000000},
+            
+            # AI - AI芯片
             {"symbol": "688256.SH", "name": "寒武纪", "market": "sh", "sector": "ai", "sub_sector": "AI芯片", "total_shares": 416000000, "is_hot": True},
+            {"symbol": "688787.SH", "name": "海天瑞声", "market": "sh", "sector": "ai", "sub_sector": "AI数据服务", "total_shares": 60000000},
+            
+            # AI - 应用
             {"symbol": "002230.SZ", "name": "科大讯飞", "market": "sz", "sector": "ai", "sub_sector": "语音识别", "total_shares": 2300000000},
+            {"symbol": "688327.SH", "name": "云从科技", "market": "sh", "sector": "ai", "sub_sector": "计算机视觉", "total_shares": 740000000},
+            {"symbol": "688207.SH", "name": "格灵深瞳", "market": "sh", "sector": "ai", "sub_sector": "计算机视觉", "total_shares": 260000000},
+            
+            # 新能源 - 动力电池
             {"symbol": "300750.SZ", "name": "宁德时代", "market": "sz", "sector": "new_energy", "sub_sector": "动力电池", "total_shares": 4400000000, "is_hot": True},
+            {"symbol": "002074.SZ", "name": "国轩高科", "market": "sz", "sector": "new_energy", "sub_sector": "动力电池", "total_shares": 1780000000},
+            {"symbol": "688567.SH", "name": "孚能科技", "market": "sh", "sector": "new_energy", "sub_sector": "动力电池", "total_shares": 1200000000},
+            
+            # 新能源 - 整车
             {"symbol": "002594.SZ", "name": "比亚迪", "market": "sz", "sector": "new_energy", "sub_sector": "新能源汽车", "total_shares": 2900000000, "is_hot": True},
+            {"symbol": "601127.SH", "name": "赛力斯", "market": "sh", "sector": "new_energy", "sub_sector": "新能源汽车", "total_shares": 1500000000},
+            {"symbol": "000625.SZ", "name": "长安汽车", "market": "sz", "sector": "new_energy", "sub_sector": "新能源汽车", "total_shares": 9910000000},
+            {"symbol": "600733.SH", "name": "北汽蓝谷", "market": "sh", "sector": "new_energy", "sub_sector": "新能源汽车", "total_shares": 5570000000},
+            
+            # 新能源 - 光伏
             {"symbol": "601012.SH", "name": "隆基绿能", "market": "sh", "sector": "new_energy", "sub_sector": "光伏", "total_shares": 7500000000},
+            {"symbol": "600438.SH", "name": "通威股份", "market": "sh", "sector": "new_energy", "sub_sector": "光伏", "total_shares": 4500000000},
+            {"symbol": "688599.SH", "name": "天合光能", "market": "sh", "sector": "new_energy", "sub_sector": "光伏组件", "total_shares": 2180000000},
+            {"symbol": "688223.SH", "name": "晶科能源", "market": "sh", "sector": "new_energy", "sub_sector": "光伏组件", "total_shares": 10000000000},
+            {"symbol": "002459.SZ", "name": "晶澳科技", "market": "sz", "sector": "new_energy", "sub_sector": "光伏组件", "total_shares": 3300000000},
+            {"symbol": "300274.SZ", "name": "阳光电源", "market": "sz", "sector": "new_energy", "sub_sector": "逆变器", "total_shares": 1480000000},
+            {"symbol": "688390.SH", "name": "固德威", "market": "sh", "sector": "new_energy", "sub_sector": "逆变器", "total_shares": 173000000},
+            {"symbol": "688032.SH", "name": "禾迈股份", "market": "sh", "sector": "new_energy", "sub_sector": "微型逆变器", "total_shares": 83000000},
+            
+            # 新能源 - 储能
+            {"symbol": "300014.SZ", "name": "亿纬锂能", "market": "sz", "sector": "new_energy", "sub_sector": "储能电池", "total_shares": 2040000000},
+            {"symbol": "002812.SZ", "name": "恩捷股份", "market": "sz", "sector": "new_energy", "sub_sector": "锂电池隔膜", "total_shares": 977000000},
+            {"symbol": "300073.SZ", "name": "当升科技", "market": "sz", "sector": "new_energy", "sub_sector": "锂电池正极", "total_shares": 507000000},
+            
+            # 云计算 - 软件服务
             {"symbol": "688111.SH", "name": "金山办公", "market": "sh", "sector": "cloud_computing", "sub_sector": "办公软件", "total_shares": 461000000},
+            {"symbol": "600570.SH", "name": "恒生电子", "market": "sh", "sector": "cloud_computing", "sub_sector": "金融软件", "total_shares": 1900000000},
             {"symbol": "300454.SZ", "name": "深信服", "market": "sz", "sector": "cloud_computing", "sub_sector": "网络安全", "total_shares": 419000000},
+            {"symbol": "688561.SH", "name": "奇安信", "market": "sh", "sector": "cloud_computing", "sub_sector": "网络安全", "total_shares": 685000000},
+            {"symbol": "300496.SZ", "name": "中科创达", "market": "sz", "sector": "cloud_computing", "sub_sector": "智能操作系统", "total_shares": 459000000},
+            {"symbol": "688188.SH", "name": "柏楚电子", "market": "sh", "sector": "cloud_computing", "sub_sector": "工业软件", "total_shares": 146000000},
+            
+            # 云计算 - SaaS
+            {"symbol": "300682.SZ", "name": "朗新科技", "market": "sz", "sector": "cloud_computing", "sub_sector": "能源SaaS", "total_shares": 1070000000},
+            {"symbol": "688369.SH", "name": "致远互联", "market": "sh", "sector": "cloud_computing", "sub_sector": "协同办公", "total_shares": 115000000},
         ]
         
         for data in stocks_data:
             stock = Stock(**data)
             db.add(stock)
         db.commit()
-        print("创建了股票数据")
+        print(f"创建了 {len(stocks_data)} 只股票数据")
         
         # 2. 创建实时行情
-        base_prices = {
-            "688981.SH": 58.20, "002371.SZ": 245.0, "603501.SH": 85.50,
-            "688256.SH": 185.40, "002230.SZ": 42.80, "300750.SZ": 185.60,
-            "002594.SZ": 268.50, "601012.SH": 18.20, "688111.SH": 285.30,
-            "300454.SZ": 58.90
-        }
-        
-        for symbol, base_price in base_prices.items():
+        for stock in stocks_data:
+            base_price = random.uniform(10, 300)
             change = random.uniform(-5, 5)
             quote = StockQuote(
-                symbol=symbol,
+                symbol=stock["symbol"],
                 current_price=round(base_price + change, 2),
                 open_price=round(base_price + random.uniform(-2, 2), 2),
                 high_price=round(base_price + random.uniform(0, 8), 2),
@@ -66,16 +126,16 @@ def init_database():
         print("创建了行情数据")
         
         # 3. 创建财务指标
-        for symbol in base_prices.keys():
+        for stock in stocks_data:
             indicator = FinancialIndicator(
-                symbol=symbol,
+                symbol=stock["symbol"],
                 report_date=date(2024, 12, 31),
-                pe_ttm=round(random.uniform(20, 80), 2),
-                pb=round(random.uniform(2, 8), 2),
-                roe=round(random.uniform(5, 20), 2),
-                gross_margin=round(random.uniform(25, 45), 2),
-                revenue_growth_3y=round(random.uniform(10, 35), 2),
-                debt_to_equity=round(random.uniform(0.3, 0.7), 2)
+                pe_ttm=round(random.uniform(15, 80), 2),
+                pb=round(random.uniform(2, 10), 2),
+                roe=round(random.uniform(5, 25), 2),
+                gross_margin=round(random.uniform(20, 50), 2),
+                revenue_growth_3y=round(random.uniform(10, 40), 2),
+                debt_to_equity=round(random.uniform(0.2, 0.7), 2)
             )
             db.add(indicator)
         db.commit()
