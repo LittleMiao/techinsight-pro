@@ -9,18 +9,19 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 import random
 
+
 class AnalystService:
     """博主框架管理服务"""
-    
+
     @staticmethod
     def get_analysts(db: Session, is_active: bool = True):
         """获取博主列表"""
         query = db.query(AnalystFramework)
         if is_active:
             query = query.filter(AnalystFramework.is_active == True)
-        
+
         analysts = query.order_by(desc(AnalystFramework.hit_rate)).all()
-        
+
         return {
             "total": len(analysts),
             "list": [
@@ -39,17 +40,17 @@ class AnalystService:
                 for a in analysts
             ]
         }
-    
+
     @staticmethod
     def get_analyst(db: Session, analyst_id: str):
         """获取博主详情"""
         analyst = db.query(AnalystFramework).filter(
             AnalystFramework.analyst_id == analyst_id
         ).first()
-        
+
         if not analyst:
             return None
-        
+
         return {
             "id": analyst.id,
             "analyst_name": analyst.analyst_name,
@@ -72,7 +73,7 @@ class AnalystService:
             "is_active": analyst.is_active,
             "created_at": analyst.created_at
         }
-    
+
     @staticmethod
     def create_analyst(db: Session, analyst_data: AnalystFrameworkCreate):
         """创建博主框架"""
@@ -94,14 +95,14 @@ class AnalystService:
         db.commit()
         db.refresh(analyst)
         return analyst
-    
+
     @staticmethod
     def get_judgments(db: Session, analyst_id: str, limit: int = 20):
         """获取博主历史判断"""
         judgments = db.query(AnalystJudgment).filter(
             AnalystJudgment.analyst_id == analyst_id
         ).order_by(desc(AnalystJudgment.judgment_date)).limit(limit).all()
-        
+
         return {
             "total": len(judgments),
             "list": [
@@ -121,9 +122,10 @@ class AnalystService:
             ]
         }
 
+
 class SimulationService:
     """模拟分析服务"""
-    
+
     @staticmethod
     def simulate_analysis(db: Session, analyst_id: str, symbol: str):
         """执行模拟分析"""
@@ -131,30 +133,30 @@ class SimulationService:
         analyst = db.query(AnalystFramework).filter(
             AnalystFramework.analyst_id == analyst_id
         ).first()
-        
+
         if not analyst:
             return None
-        
+
         # 获取股票数据
         stock = db.query(Stock).filter(Stock.symbol == symbol).first()
         if not stock:
             return None
-        
+
         quote = stock.quote
         indicator = db.query(FinancialIndicator).filter(
             FinancialIndicator.symbol == symbol
         ).order_by(desc(FinancialIndicator.report_date)).first()
-        
+
         # 模拟分析步骤
         steps = SimulationService._generate_analysis_steps(
             analyst, stock, quote, indicator
         )
-        
+
         # 计算综合判断
         passed_steps = sum(1 for s in steps if s["result"] == "通过")
         total_steps = len(steps)
         confidence = (passed_steps / total_steps) * 100 if total_steps > 0 else 50
-        
+
         # 判断方向
         if confidence >= 70:
             judgment = "buy"
@@ -162,16 +164,16 @@ class SimulationService:
             judgment = "hold"
         else:
             judgment = "sell"
-        
+
         # 生成关键发现和风险提示
         key_findings = SimulationService._generate_key_findings(steps, stock)
         risk_warnings = SimulationService._generate_risk_warnings(analyst, indicator)
-        
+
         # 生成完整报告
         report = SimulationService._generate_report(
             analyst, stock, steps, judgment, confidence, key_findings, risk_warnings
         )
-        
+
         # 保存模拟结果
         simulation = SimulatedAnalysis(
             analyst_id=analyst_id,
@@ -187,7 +189,7 @@ class SimulationService:
         )
         db.add(simulation)
         db.commit()
-        
+
         return {
             "analyst_name": analyst.analyst_name,
             "analyst_id": analyst.analyst_id,
@@ -202,7 +204,7 @@ class SimulationService:
             "divergence_from_consensus": "市场主流观点偏谨慎，但按该博主框架，当前具备配置价值" if judgment == "buy" else None,
             "report": report
         }
-    
+
     @staticmethod
     def _generate_analysis_steps(analyst, stock, quote, indicator):
         """生成分析步骤"""
@@ -214,30 +216,30 @@ class SimulationService:
             {"step": "Step 4: 估值合理性", "focus": "估值水平"},
             {"step": "Step 5: 风险评估", "focus": "主要风险点"}
         ]
-        
+
         steps = []
         for i, proc in enumerate(process):
             step_name = proc.get("step", f"Step {i+1}")
             focus = proc.get("focus", "")
-            
+
             # 根据步骤类型生成分析结果
             result, detail = SimulationService._analyze_step(
                 step_name, focus, stock, quote, indicator
             )
-            
+
             steps.append({
                 "step": step_name,
                 "result": result,
                 "detail": detail
             })
-        
+
         return steps
-    
+
     @staticmethod
     def _analyze_step(step_name, focus, stock, quote, indicator):
         """分析单个步骤"""
         results = ["通过", "不通过", "待观察"]
-        
+
         if "行业" in step_name or "景气" in step_name:
             # 模拟行业分析
             result = random.choice(["通过", "通过", "待观察"])
@@ -249,12 +251,12 @@ class SimulationService:
             elif stock.sector == "new_energy":
                 detail = "新能源行业竞争加剧，但龙头优势明显"
             return result, detail
-        
+
         elif "竞争" in step_name or "格局" in step_name:
             result = "通过"
             detail = f"{stock.name}在{stock.sub_sector}领域具备领先优势"
             return result, detail
-        
+
         elif "财务" in step_name:
             if indicator:
                 if indicator.revenue_growth_3y and indicator.revenue_growth_3y > 15:
@@ -268,7 +270,7 @@ class SimulationService:
                     detail = "营收增长承压，需警惕"
                 return result, detail
             return "待观察", "财务数据待验证"
-        
+
         elif "估值" in step_name:
             if indicator and indicator.pe_ttm:
                 if indicator.pe_ttm < 30:
@@ -282,14 +284,14 @@ class SimulationService:
                     detail = f"当前PE {indicator.pe_ttm:.1f}x，估值偏高"
                 return result, detail
             return "待观察", "估值数据待确认"
-        
+
         elif "风险" in step_name:
             result = random.choice(["通过", "待观察"])
             detail = "主要风险已充分定价" if result == "通过" else "存在不确定性风险需关注"
             return result, detail
-        
+
         return random.choice(results), "分析中..."
-    
+
     @staticmethod
     def _generate_key_findings(steps, stock):
         """生成关键发现"""
@@ -298,30 +300,30 @@ class SimulationService:
             if step["result"] == "通过":
                 findings.append(step["detail"])
         return findings[:3] if findings else ["整体分析结果待进一步验证"]
-    
+
     @staticmethod
     def _generate_risk_warnings(analyst, indicator):
         """生成风险提示"""
         warnings = []
-        
+
         # 使用博主的风险规则
         if analyst.avoid_patterns:
             warnings.extend(analyst.avoid_patterns[:2])
-        
+
         # 基于财务数据的风险提示
         if indicator:
-            if indicator.debt_to_equity and indicator.debt_to_equity > 0.6:
+            if hasattr(indicator, 'debt_ratio') and indicator.debt_ratio and indicator.debt_ratio > 60:
                 warnings.append("负债率偏高，需关注财务风险")
-            if indicator.revenue_growth_3y and indicator.revenue_growth_3y < 10:
+            if hasattr(indicator, 'revenue_growth_3y') and indicator.revenue_growth_3y and indicator.revenue_growth_3y < 10:
                 warnings.append("营收增速放缓，成长性存疑")
-        
+
         return warnings if warnings else ["暂无明显风险信号"]
-    
+
     @staticmethod
     def _generate_report(analyst, stock, steps, judgment, confidence, findings, risks):
         """生成完整分析报告"""
         judgment_text = {"buy": "看多", "hold": "中性", "sell": "看空"}
-        
+
         report = f"""【{analyst.analyst_name}风格模拟分析报告】
 
 股票: {stock.name} ({stock.symbol})
@@ -333,9 +335,9 @@ class SimulationService:
 
 """
         for step in steps:
-            icon = "✅" if step["result"] == "通过" else ("⚠️" if step["result"] == "待观察" else "❌")
-            report += f"{icon} {step['step']}\n   {step['detail']}\n\n"
-        
+            icon = "通过" if step["result"] == "通过" else ("待观察" if step["result"] == "待观察" else "不通过")
+            report += f"[{icon}] {step['step']}\n   {step['detail']}\n\n"
+
         report += f"""═══════════════════════════════════════
 
 【综合判断】{judgment_text.get(judgment, '中性')}
@@ -344,14 +346,14 @@ class SimulationService:
 【关键发现】
 """
         for f in findings:
-            report += f"• {f}\n"
-        
+            report += f"- {f}\n"
+
         report += f"""
 【风险提示】
 """
         for r in risks:
-            report += f"• {r}\n"
-        
+            report += f"- {r}\n"
+
         report += f"""
 ═══════════════════════════════════════
 
@@ -362,20 +364,21 @@ class SimulationService:
 """
         return report
 
+
 class StockService:
     """股票服务"""
-    
+
     @staticmethod
     def get_stocks(db: Session, sector: Optional[str] = None, page: int = 1, page_size: int = 20):
         """获取股票列表"""
         query = db.query(Stock)
-        
+
         if sector:
             query = query.filter(Stock.sector == sector)
-        
+
         total = query.count()
         stocks = query.offset((page - 1) * page_size).limit(page_size).all()
-        
+
         result = []
         for stock in stocks:
             stock_dict = {
@@ -391,40 +394,101 @@ class StockService:
                 "is_hot": stock.is_hot
             }
             result.append(stock_dict)
-        
+
         return {
             "total": total,
             "page": page,
             "page_size": page_size,
             "list": result
         }
-    
+
     @staticmethod
     def get_stock_detail(db: Session, symbol: str):
-        """获取股票详情"""
+        """获取股票详情 - 返回全部27个字段"""
         stock = db.query(Stock).filter(Stock.symbol == symbol).first()
         if not stock:
             return None
-        
+
         quote = stock.quote
         indicator = db.query(FinancialIndicator).filter(
             FinancialIndicator.symbol == symbol
         ).order_by(desc(FinancialIndicator.report_date)).first()
-        
-        return {
+
+        # 基础信息
+        result = {
             "id": stock.id,
             "symbol": stock.symbol,
             "name": stock.name,
             "market": stock.market,
             "sector": stock.sector,
             "sub_sector": stock.sub_sector,
-            "market_cap": stock.total_shares * quote.current_price if quote and stock.total_shares else None,
+            "total_shares": stock.total_shares,
+            "is_hot": stock.is_hot,
+            # 行情数据
             "price": quote.current_price if quote else None,
             "change_percent": quote.change_percent if quote else None,
-            "pe_ttm": indicator.pe_ttm if indicator else None,
-            "pb": indicator.pb if indicator else None,
-            "roe": indicator.roe if indicator else None,
-            "revenue_growth": indicator.revenue_growth_3y if indicator else None,
-            "gross_margin": indicator.gross_margin if indicator else None,
-            "debt_ratio": indicator.debt_to_equity * 100 if indicator and indicator.debt_to_equity else None
+            "change_amount": quote.change_amount if quote else None,
+            "open_price": quote.open_price if quote else None,
+            "high_price": quote.high_price if quote else None,
+            "low_price": quote.low_price if quote else None,
+            "prev_close": quote.prev_close if quote else None,
+            "volume": quote.volume if quote else None,
+            "turnover": quote.turnover if quote else None,
+            "market_cap": stock.total_shares * quote.current_price if quote and stock.total_shares else None,
         }
+
+        # 财务指标 - 27个字段
+        if indicator:
+            # 估值指标
+            result["pe_ttm"] = indicator.pe_ttm  # 市盈率(TTM)
+            result["pb"] = indicator.pb  # 市净率
+            result["ps_ttm"] = getattr(indicator, 'ps_ttm', None)  # 市销率(TTM)
+            result["ev_ebitda"] = getattr(indicator, 'ev_ebitda', None)  # EV/EBITDA
+            result["pcf"] = getattr(indicator, 'pcf', None)  # 市现率
+
+            # 盈利能力指标
+            result["roe"] = indicator.roe  # 净资产收益率
+            result["roa"] = getattr(indicator, 'roa', None)  # 总资产收益率
+            result["gross_margin"] = indicator.gross_margin  # 毛利率
+            result["net_margin"] = getattr(indicator, 'net_margin', None)  # 净利率
+            result["operating_margin"] = getattr(indicator, 'operating_margin', None)  # 营业利润率
+
+            # 成长性指标
+            result["revenue_growth_3y"] = indicator.revenue_growth_3y  # 3年营收复合增长率
+            result["profit_growth_3y"] = getattr(indicator, 'profit_growth_3y', None)  # 3年利润复合增长率
+            result["revenue_growth_5y"] = getattr(indicator, 'revenue_growth_5y', None)  # 5年营收复合增长率
+            result["profit_growth_5y"] = getattr(indicator, 'profit_growth_5y', None)  # 5年利润复合增长率
+
+            # 偿债能力指标
+            result["current_ratio"] = getattr(indicator, 'current_ratio', None)  # 流动比率
+            result["quick_ratio"] = getattr(indicator, 'quick_ratio', None)  # 速动比率
+            result["debt_ratio"] = getattr(indicator, 'debt_ratio', None)  # 资产负债率
+            result["interest_coverage"] = getattr(indicator, 'interest_coverage', None)  # 利息保障倍数
+
+            # 其他指标
+            result["report_date"] = indicator.report_date
+        else:
+            # 如果没有财务数据，填充None
+            result.update({
+                "pe_ttm": None,
+                "pb": None,
+                "ps_ttm": None,
+                "ev_ebitda": None,
+                "pcf": None,
+                "roe": None,
+                "roa": None,
+                "gross_margin": None,
+                "net_margin": None,
+                "operating_margin": None,
+                "revenue_growth_3y": None,
+                "profit_growth_3y": None,
+                "revenue_growth_5y": None,
+                "profit_growth_5y": None,
+                "current_ratio": None,
+                "quick_ratio": None,
+                "debt_ratio": None,
+                "interest_coverage": None,
+                "report_date": None,
+            })
+
+        return result

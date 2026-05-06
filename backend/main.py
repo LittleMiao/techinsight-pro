@@ -35,6 +35,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ==================== 博主框架管理API ====================
 
 @app.get("/api/v1/analysts", response_model=AnalystListResponse)
@@ -46,6 +47,7 @@ def get_analysts(
     data = AnalystService.get_analysts(db, is_active)
     return AnalystListResponse(data=data)
 
+
 @app.get("/api/v1/analysts/{analyst_id}", response_model=AnalystDetailResponse)
 def get_analyst(analyst_id: str, db: Session = Depends(get_db)):
     """获取博主详情"""
@@ -53,6 +55,7 @@ def get_analyst(analyst_id: str, db: Session = Depends(get_db)):
     if not data:
         raise HTTPException(status_code=404, detail="博主不存在")
     return AnalystDetailResponse(data=data)
+
 
 @app.post("/api/v1/analysts", response_model=AnalystDetailResponse)
 def create_analyst(
@@ -64,6 +67,7 @@ def create_analyst(
     data = AnalystService.get_analyst(db, analyst.analyst_id)
     return AnalystDetailResponse(data=data)
 
+
 @app.get("/api/v1/analysts/{analyst_id}/judgments")
 def get_analyst_judgments(
     analyst_id: str,
@@ -73,6 +77,7 @@ def get_analyst_judgments(
     """获取博主历史判断"""
     data = AnalystService.get_judgments(db, analyst_id, limit)
     return {"code": 200, "data": data}
+
 
 # ==================== 模拟分析API ====================
 
@@ -88,6 +93,7 @@ def simulate_analysis(
         raise HTTPException(status_code=404, detail="博主或股票不存在")
     return SimulatedAnalysisAPIResponse(data=data)
 
+
 @app.get("/api/v1/stocks/{symbol}/analyst-views")
 def get_stock_analyst_views(
     symbol: str,
@@ -97,7 +103,7 @@ def get_stock_analyst_views(
     analysts = db.query(AnalystFramework).filter(
         AnalystFramework.is_active == True
     ).limit(5).all()
-    
+
     views = []
     for analyst in analysts:
         # 获取最新的模拟分析
@@ -105,7 +111,7 @@ def get_stock_analyst_views(
             SimulatedAnalysis.analyst_id == analyst.analyst_id,
             SimulatedAnalysis.symbol == symbol
         ).order_by(SimulatedAnalysis.analysis_date.desc()).first()
-        
+
         if latest:
             views.append({
                 "analyst_name": analyst.analyst_name,
@@ -115,8 +121,9 @@ def get_stock_analyst_views(
                 "similarity": latest.style_similarity,
                 "date": latest.analysis_date
             })
-    
+
     return {"code": 200, "data": {"symbol": symbol, "views": views}}
+
 
 # ==================== 股票相关API ====================
 
@@ -131,6 +138,7 @@ def get_stocks(
     data = StockService.get_stocks(db, sector, page, page_size)
     return StockListResponse(data=data)
 
+
 @app.get("/api/v1/stocks/{symbol}", response_model=StockDetailResponse)
 def get_stock_detail(symbol: str, db: Session = Depends(get_db)):
     """获取股票详情"""
@@ -139,12 +147,14 @@ def get_stock_detail(symbol: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="股票不存在")
     return StockDetailResponse(data=data)
 
+
 # ==================== 健康检查 ====================
 
 @app.get("/health")
 def health_check():
     """健康检查"""
     return {"status": "ok", "service": "TechInsight Pro API"}
+
 
 @app.get("/")
 def root():
@@ -155,6 +165,7 @@ def root():
         "features": ["股票分析", "博主风格蒸馏", "模拟分析"],
         "docs": "/docs"
     }
+
 
 if __name__ == "__main__":
     import uvicorn
