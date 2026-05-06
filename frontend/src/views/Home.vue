@@ -3,24 +3,22 @@
     <div class="page-header">
       <h1 class="page-title">股票列表</h1>
       <div class="header-actions">
-        <el-select v-model="sectorFilter" placeholder="选择行业" clearable class="sector-select">
+        <el-select v-model="sectorFilter" placeholder="选择行业" clearable class="sector-select" @change="handleSectorChange">
           <el-option label="全部行业" value="" />
-          <el-option label="科技" value="科技" />
-          <el-option label="金融" value="金融" />
-          <el-option label="消费" value="消费" />
-          <el-option label="医疗" value="医疗" />
-          <el-option label="能源" value="能源" />
+          <el-option label="半导体" value="semiconductor" />
+          <el-option label="AI" value="ai" />
+          <el-option label="新能源" value="new_energy" />
+          <el-option label="云计算" value="cloud_computing" />
         </el-select>
       </div>
     </div>
 
     <el-tabs v-model="activeTab" @tab-change="handleTabChange" class="sector-tabs">
       <el-tab-pane label="全部" name="all" />
-      <el-tab-pane label="科技" name="tech" />
-      <el-tab-pane label="金融" name="finance" />
-      <el-tab-pane label="消费" name="consumer" />
-      <el-tab-pane label="医疗" name="healthcare" />
-      <el-tab-pane label="能源" name="energy" />
+      <el-tab-pane label="半导体" name="semiconductor" />
+      <el-tab-pane label="AI" name="ai" />
+      <el-tab-pane label="新能源" name="new_energy" />
+      <el-tab-pane label="云计算" name="cloud_computing" />
     </el-tabs>
 
     <div class="search-section">
@@ -45,30 +43,36 @@
       class="stock-table"
       @row-click="handleRowClick"
     >
-      <el-table-column prop="code" label="股票代码" width="120" />
+      <el-table-column prop="symbol" label="股票代码" width="140" />
       <el-table-column prop="name" label="股票名称" min-width="150">
         <template #default="{ row }">
-          <span class="stock-name">{{ row.name }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="sector" label="行业" width="100" />
-      <el-table-column prop="price" label="现价" width="100" align="right">
-        <template #default="{ row }">
-          <span class="price">¥{{ row.price?.toFixed(2) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="change" label="涨跌幅" width="120" align="right">
-        <template #default="{ row }">
-          <span :class="getChangeClass(row.change)">
-            {{ row.change >= 0 ? '+' : '' }}{{ row.change?.toFixed(2) }}%
+          <span class="stock-name">
+            {{ row.name }}
+            <el-tag v-if="row.is_hot" type="danger" size="small" class="hot-tag">热</el-tag>
           </span>
         </template>
       </el-table-column>
-      <el-table-column prop="pe" label="市盈率" width="100" align="right" />
-      <el-table-column prop="pb" label="市净率" width="100" align="right" />
-      <el-table-column prop="marketCap" label="市值(亿)" width="120" align="right">
+      <el-table-column prop="sector" label="行业" width="100">
         <template #default="{ row }">
-          {{ row.marketCap?.toFixed(2) }}
+          {{ sectorLabelMap[row.sector] || row.sector }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="market" label="市场" width="80" />
+      <el-table-column prop="price" label="现价" width="100" align="right">
+        <template #default="{ row }">
+          <span class="price">&yen;{{ row.price?.toFixed(2) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="change_percent" label="涨跌幅" width="120" align="right">
+        <template #default="{ row }">
+          <span :class="getChangeClass(row.change_percent)">
+            {{ row.change_percent >= 0 ? '+' : '' }}{{ row.change_percent?.toFixed(2) }}%
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="market_cap" label="市值(亿)" width="120" align="right">
+        <template #default="{ row }">
+          {{ formatMarketCap(row.market_cap) }}
         </template>
       </el-table-column>
       <el-table-column label="操作" width="100" align="center">
@@ -86,6 +90,7 @@
       :total="total"
       layout="total, prev, pager, next"
       class="pagination"
+      @current-change="handlePageChange"
     />
   </div>
 </template>
@@ -108,80 +113,91 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 
-const sectorMap = {
-  all: '',
-  tech: '科技',
-  finance: '金融',
-  consumer: '消费',
-  healthcare: '医疗',
-  energy: '能源'
+const sectorLabelMap = {
+  semiconductor: '半导体',
+  ai: 'AI',
+  new_energy: '新能源',
+  cloud_computing: '云计算'
 }
 
+// 前端本地搜索过滤（API 不支持关键字搜索）
 const filteredStockList = computed(() => {
-  let result = stockList.value
-
-  if (sectorFilter.value) {
-    result = result.filter(item => item.sector === sectorFilter.value)
+  if (!searchKeyword.value) {
+    return stockList.value
   }
-
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(item =>
-      item.code.toLowerCase().includes(keyword) ||
-      item.name.toLowerCase().includes(keyword)
-    )
-  }
-
-  return result
+  const keyword = searchKeyword.value.toLowerCase()
+  return stockList.value.filter(item =>
+    item.symbol.toLowerCase().includes(keyword) ||
+    item.name.toLowerCase().includes(keyword)
+  )
 })
 
-const getChangeClass = (change) => {
-  if (change > 0) return 'change-up'
-  if (change < 0) return 'change-down'
+const formatMarketCap = (marketCap) => {
+  if (marketCap == null) return '--'
+  return (marketCap / 100000000).toFixed(2)
+}
+
+const getChangeClass = (changePercent) => {
+  if (changePercent > 0) return 'change-up'
+  if (changePercent < 0) return 'change-down'
   return ''
 }
 
 const handleTabChange = (tabName) => {
-  sectorFilter.value = sectorMap[tabName]
+  if (tabName === 'all') {
+    sectorFilter.value = ''
+  } else {
+    sectorFilter.value = tabName
+  }
+  currentPage.value = 1
+  fetchStockList()
+}
+
+const handleSectorChange = () => {
+  // 同步 tab 状态
+  if (sectorFilter.value === '') {
+    activeTab.value = 'all'
+  } else {
+    activeTab.value = sectorFilter.value
+  }
+  currentPage.value = 1
+  fetchStockList()
 }
 
 const handleSearchInput = () => {
-  currentPage.value = 1
+  // 搜索为前端本地过滤，不需要重新请求
+}
+
+const handlePageChange = () => {
+  fetchStockList()
 }
 
 const handleRowClick = (row) => {
-  router.push(`/stock/${row.code}`)
+  router.push(`/stock/${row.symbol}`)
 }
 
 const viewDetail = (row) => {
-  router.push(`/stock/${row.code}`)
+  router.push(`/stock/${row.symbol}`)
 }
 
 const fetchStockList = async () => {
   loading.value = true
   try {
-    const response = await stockApi.getStockList({
+    const params = {
       page: currentPage.value,
       page_size: pageSize.value
-    })
-    stockList.value = response.data.stocks || []
-    total.value = response.data.total || stockList.value.length
+    }
+    if (sectorFilter.value) {
+      params.sector = sectorFilter.value
+    }
+    const res = await stockApi.getStockList(params)
+    // 响应拦截器已解包 response.data，res = { code: 200, data: { total, page, page_size, list } }
+    stockList.value = res.data?.list || []
+    total.value = res.data?.total || 0
   } catch (error) {
     console.error('获取股票列表失败:', error)
-    // 使用模拟数据
-    stockList.value = [
-      { code: '600519', name: '贵州茅台', sector: '消费', price: 1688.00, change: 2.35, pe: 32.5, pb: 11.2, marketCap: 21200 },
-      { code: '000858', name: '五粮液', sector: '消费', price: 145.60, change: -1.23, pe: 22.8, pb: 5.6, marketCap: 5650 },
-      { code: '600036', name: '招商银行', sector: '金融', price: 35.80, change: 0.85, pe: 8.2, pb: 1.3, marketCap: 8960 },
-      { code: '601318', name: '中国平安', sector: '金融', price: 48.50, change: -0.52, pe: 9.5, pb: 1.5, marketCap: 8880 },
-      { code: '000001', name: '平安银行', sector: '金融', price: 12.35, change: 1.20, pe: 6.8, pb: 0.9, marketCap: 2380 },
-      { code: '600276', name: '恒瑞医药', sector: '医疗', price: 52.80, change: 3.45, pe: 65.2, pb: 8.9, marketCap: 3360 },
-      { code: '300760', name: '迈瑞医疗', sector: '医疗', price: 298.50, change: 1.78, pe: 45.6, pb: 12.3, marketCap: 3640 },
-      { code: '002594', name: '比亚迪', sector: '科技', price: 268.00, change: -2.15, pe: 38.5, pb: 7.8, marketCap: 7800 },
-      { code: '600030', name: '中信证券', sector: '金融', price: 22.50, change: 0.45, pe: 18.2, pb: 1.8, marketCap: 3280 },
-      { code: '601888', name: '中国中免', sector: '消费', price: 68.90, change: 2.10, pe: 28.5, pb: 6.2, marketCap: 1340 }
-    ]
-    total.value = stockList.value.length
+    stockList.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -254,6 +270,11 @@ watch(() => route.query.search, (newVal) => {
 .stock-name {
   font-weight: 500;
   color: #409eff;
+}
+
+.hot-tag {
+  margin-left: 4px;
+  vertical-align: middle;
 }
 
 .price {

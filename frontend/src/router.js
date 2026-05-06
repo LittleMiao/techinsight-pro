@@ -10,7 +10,7 @@ const routes = [
     component: Home
   },
   {
-    path: '/stock/:code',
+    path: '/stock/:symbol',
     name: 'StockDetail',
     component: StockDetail
   },
