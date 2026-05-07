@@ -342,10 +342,231 @@ def init_database():
         db.commit()
         print("创建了3个博主框架数据")
 
+        # 5. 创建历史财务指标数据（每只股票8个季度）
+        total_hist = 0
+        quarters = [
+            date(2024, 3, 31), date(2024, 6, 30), date(2024, 9, 30), date(2024, 12, 31),
+            date(2025, 3, 31), date(2025, 6, 30), date(2025, 9, 30), date(2025, 12, 31)
+        ]
+        hist_fields = [
+            "pe_ttm", "pb", "ps_ttm", "roe", "roa",
+            "gross_margin", "net_margin", "operating_margin",
+            "revenue_growth_3y", "profit_growth_3y",
+            "debt_to_equity", "current_ratio"
+        ]
+
+        for stock in stocks_data:
+            current = db.query(FinancialIndicator).filter(
+                FinancialIndicator.symbol == stock["symbol"]
+            ).first()
+            if not current:
+                continue
+
+            for i, q_date in enumerate(quarters):
+                # 越早的季度偏离越大，越接近当前值的季度偏离越小
+                factor = 0.7 + 0.3 * (i / (len(quarters) - 1))  # 0.7 -> 1.0
+                noise = random.uniform(0.85, 1.15)
+                multiplier = factor * noise
+
+                hist_data = {
+                    "symbol": stock["symbol"],
+                    "report_date": q_date,
+                }
+                for field in hist_fields:
+                    current_val = getattr(current, field, None)
+                    if current_val is not None:
+                        hist_data[field] = round(current_val * multiplier, 2)
+                    else:
+                        hist_data[field] = None
+
+                db.add(HistoricalIndicator(**hist_data))
+                total_hist += 1
+
+        db.commit()
+        print(f"创建了 {total_hist} 条历史财务指标数据")
+
+        # 6. 创建信息源数据（每只股票6-10条）
+        total_sources = 0
+
+        # 行业相关的新闻/研报关键词模板
+        sector_keywords = {
+            "semiconductor": {
+                "news_titles": [
+                    "{name}获得大额芯片订单，产能利用率持续攀升",
+                    "{name}发布新一代{sub_sector}产品，技术指标达到国际领先水平",
+                    "半导体国产替代加速，{name}有望受益于政策红利",
+                ],
+                "research_summaries": [
+                    "半导体行业景气度持续回升，{name}作为{sub_sector}龙头有望充分受益。公司技术实力突出，客户拓展顺利，维持增持评级。",
+                    "看好{name}在{sub_sector}领域的长期竞争力，随着下游需求回暖和国产替代推进，业绩有望持续超预期。",
+                    '{name}核心产品竞争力强，{sub_sector}赛道空间广阔，给予「买入」评级，目标价看涨30%。',
+                ],
+                "report_summaries": [
+                    "报告期内，公司实现营业收入稳健增长，{sub_sector}业务保持良好发展势头。研发投入持续加大，新产品进展顺利，市场竞争力进一步提升。",
+                    "公司{sub_sector}业务收入同比增长显著，毛利率保持稳定。在建产能稳步推进，为未来增长奠定基础。",
+                ],
+            },
+            "ai": {
+                "news_titles": [
+                    "{name}发布大模型新产品，AI应用落地加速",
+                    "{name}与多家头部企业达成AI战略合作协议",
+                    "AI政策持续加码，{name}核心业务迎来发展机遇",
+                ],
+                "research_summaries": [
+                    "AI产业趋势明确，{name}在{sub_sector}领域具备核心技术优势。随着大模型商业化加速，公司业绩有望进入快速增长期。",
+                    "{name}AI产品矩阵持续丰富，{sub_sector}赛道渗透率快速提升，给予「增持」评级。",
+                    "看好{name}在AI{sub_sector}领域的先发优势和技术壁垒，下游需求旺盛，维持「买入」评级。",
+                ],
+                "report_summaries": [
+                    "报告期内，公司AI{sub_sector}业务收入实现高速增长，研发投入占比进一步提升。大模型相关产品已进入商业化阶段，客户反馈良好。",
+                    "公司持续深耕AI{sub_sector}领域，核心技术能力不断增强。报告期内新签订单大幅增长，市场份额稳步提升。",
+                ],
+            },
+            "new_energy": {
+                "news_titles": [
+                    "{name}中标海外大型项目，国际化布局取得新突破",
+                    "新能源补贴政策落地，{name}产业链地位进一步巩固",
+                    "{name}发布新一代产品，能量密度/转换效率创行业新高",
+                ],
+                "research_summaries": [
+                    "新能源行业景气度回升，{name}作为{sub_sector}龙头具备显著成本优势。海外市场拓展顺利，维持「增持」评级。",
+                    "看好{name}在{sub_sector}领域的龙头地位，产能扩张有序，盈利能力持续改善，给予「买入」评级。",
+                    "{name}{sub_sector}业务量价齐升，行业竞争格局优化带来盈利弹性，维持「增持」评级。",
+                ],
+                "report_summaries": [
+                    "报告期内，公司{sub_sector}业务保持快速增长，产能利用率维持高位。海外收入占比持续提升，全球化战略稳步推进。",
+                    "公司{sub_sector}产品出货量同比增长，市场份额进一步扩大。成本控制能力突出，盈利水平行业领先。",
+                ],
+            },
+            "cloud_computing": {
+                "news_titles": [
+                    "{name}发布新一代云原生产品，客户数量突破新高",
+                    "数字经济政策持续利好，{name}SaaS业务加速增长",
+                    "{name}中标多个政企大单，行业解决方案能力获认可",
+                ],
+                "research_summaries": [
+                    "企业数字化转型加速，{name}在{sub_sector}领域具备深厚积累。SaaS化转型成效显著，ARR保持高速增长，维持「增持」评级。",
+                    "看好{name}在{sub_sector}赛道的长期成长性，客户续费率和客单价持续提升，给予「买入」评级。",
+                    "{name}{sub_sector}产品竞争力突出，AI赋能带来新的增长曲线，维持「增持」评级。",
+                ],
+                "report_summaries": [
+                    "报告期内，公司{sub_sector}业务收入稳健增长，订阅收入占比持续提升。研发投入加大，AI功能集成进展顺利。",
+                    "公司{sub_sector}产品线持续丰富，大客户拓展成效显著。云化转型推动毛利率稳步改善。",
+                ],
+            },
+        }
+
+        analyst_sources_map = {
+            "semiconductor": ["半导体老王", "AI投研圈"],
+            "ai": ["AI投研圈", "半导体老王"],
+            "new_energy": ["新能源观察", "AI投研圈"],
+            "cloud_computing": ["AI投研圈", "新能源观察"],
+        }
+
+        research_brokers = ["中信证券", "华泰证券", "国泰君安", "招商证券", "海通证券"]
+        news_sources = ["东方财富", "同花顺", "证券时报", "上海证券报"]
+
+        now = datetime.now()
+
+        for stock in stocks_data:
+            sector = stock["sector"]
+            sub_sector = stock["sub_sector"]
+            name = stock["name"]
+            kw = sector_keywords.get(sector, sector_keywords["semiconductor"])
+
+            # --- 公司公告/报告 (2条) ---
+            report_titles = [
+                f"{name}2024年年度报告",
+                f"{name}2024年第三季度报告",
+            ]
+            report_dates = [
+                datetime(2025, 3, 28) + timedelta(days=random.randint(0, 10)),
+                datetime(2024, 10, 25) + timedelta(days=random.randint(0, 10)),
+            ]
+            for ri, r_title in enumerate(report_titles):
+                summary = random.choice(kw["report_summaries"]).format(
+                    name=name, sub_sector=sub_sector
+                )
+                db.add(InformationSource(
+                    symbol=stock["symbol"],
+                    source_type="report",
+                    title=r_title,
+                    source=name,
+                    publish_time=report_dates[ri],
+                    summary=summary,
+                    sentiment="neutral",
+                ))
+                total_sources += 1
+
+            # --- 券商研报 (2-3条) ---
+            num_research = random.randint(2, 3)
+            for _ in range(num_research):
+                broker = random.choice(research_brokers)
+                r_title = f"{name}深度报告：{sub_sector}行业景气度回升，维持增持评级"
+                days_ago = random.randint(30, 180)
+                pub_time = now - timedelta(days=days_ago)
+                summary = random.choice(kw["research_summaries"]).format(
+                    name=name, sub_sector=sub_sector
+                )
+                db.add(InformationSource(
+                    symbol=stock["symbol"],
+                    source_type="research",
+                    title=r_title,
+                    source=broker,
+                    publish_time=pub_time,
+                    summary=summary,
+                    sentiment="positive",
+                ))
+                total_sources += 1
+
+            # --- 新闻资讯 (2-3条) ---
+            num_news = random.randint(2, 3)
+            news_titles_shuffled = random.sample(kw["news_titles"], min(num_news, len(kw["news_titles"])))
+            for ni, n_title_tpl in enumerate(news_titles_shuffled):
+                n_title = n_title_tpl.format(name=name, sub_sector=sub_sector)
+                days_ago = random.randint(1, 180)
+                pub_time = now - timedelta(days=days_ago)
+                sentiment = random.choice(["positive", "neutral"])
+                db.add(InformationSource(
+                    symbol=stock["symbol"],
+                    source_type="news",
+                    title=n_title,
+                    source=random.choice(news_sources),
+                    publish_time=pub_time,
+                    summary=n_title,
+                    sentiment=sentiment,
+                ))
+                total_sources += 1
+
+            # --- 博主观点 (1-2条) ---
+            num_analyst = random.randint(1, 2)
+            available_analysts = analyst_sources_map.get(sector, ["AI投研圈"])
+            chosen_analysts = random.sample(available_analysts, min(num_analyst, len(available_analysts)))
+            for analyst in chosen_analysts:
+                a_title = f"关于{name}的近期看法"
+                days_ago = random.randint(1, 90)
+                pub_time = now - timedelta(days=days_ago)
+                sentiment = random.choice(["positive", "neutral"])
+                db.add(InformationSource(
+                    symbol=stock["symbol"],
+                    source_type="analyst_opinion",
+                    title=a_title,
+                    source=analyst,
+                    publish_time=pub_time,
+                    summary=f"{analyst}：{name}近期基本面稳健，{sub_sector}赛道长期逻辑不变，建议持续关注。",
+                    sentiment=sentiment,
+                ))
+                total_sources += 1
+
+        db.commit()
+        print(f"创建了 {total_sources} 条信息源数据")
+
         print("数据库初始化完成！")
         print("- 51只科技板块股票")
         print("- 完整财务指标（27个字段）")
         print("- 3个博主框架")
+        print(f"- {total_hist} 条历史财务指标（8个季度）")
+        print(f"- {total_sources} 条信息源")
 
     except Exception as e:
         print(f"初始化失败: {e}")

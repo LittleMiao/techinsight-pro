@@ -147,3 +147,39 @@ class SimulatedAnalysis(Base):
     risk_warnings = Column(JSON)
     full_report = Column(Text)
     divergence_from_consensus = Column(Text)
+
+class HistoricalIndicator(Base):
+    """历史财务指标（模拟）"""
+    __tablename__ = "historical_indicators"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String(20), ForeignKey("stocks.symbol"), index=True, nullable=False)
+    report_date = Column(Date, index=True)
+    
+    pe_ttm = Column(Float)
+    pb = Column(Float)
+    ps_ttm = Column(Float)
+    roe = Column(Float)
+    roa = Column(Float)
+    gross_margin = Column(Float)
+    net_margin = Column(Float)
+    operating_margin = Column(Float)
+    revenue_growth_3y = Column(Float)
+    profit_growth_3y = Column(Float)
+    debt_to_equity = Column(Float)
+    current_ratio = Column(Float)
+
+class InformationSource(Base):
+    """信息源"""
+    __tablename__ = "information_sources"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String(20), ForeignKey("stocks.symbol"), index=True, nullable=False)
+    source_type = Column(String(30), index=True)  # report/research/news/analyst_opinion
+    title = Column(String(500), nullable=False)
+    source = Column(String(200))  # 来源：中信证券、东方财富等
+    publish_time = Column(DateTime, nullable=False)
+    summary = Column(Text)
+    sentiment = Column(String(20))  # positive/negative/neutral
+    url = Column(String(1000))
+    created_at = Column(DateTime, default=func.now())

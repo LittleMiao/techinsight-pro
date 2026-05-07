@@ -77,9 +77,20 @@
             >PE {{ peRank.label }}</el-tag>
           </div>
           <div class="metric-cards">
-            <div class="metric-card" v-for="item in valuationMetrics" :key="item.name">
-              <div class="metric-label">{{ item.name }}</div>
-              <div class="metric-value" :style="{ color: item.color }">{{ item.value }}</div>
+            <div class="metric-card" v-for="item in valuationMetrics" :key="item.key">
+              <div class="metric-item">
+                <span class="metric-label">{{ item.name }}</span>
+                <span class="metric-value" :style="{ color: item.color }">{{ item.value }}</span>
+                <div class="metric-compare" v-if="sectorComp && sectorComp[item.key]">
+                  <span>行业均值: {{ sectorComp[item.key].sector_avg?.toFixed(1) }}</span>
+                  <span class="best">龙头: {{ sectorComp[item.key].sector_best?.name }} {{ sectorComp[item.key].sector_best?.value?.toFixed(1) }}</span>
+                </div>
+                <div class="metric-trend" v-if="historyTrend && historyTrend[item.key]">
+                  <span :class="getTrendClass(item.key, historyTrend[item.key].deviation_pct)">
+                    vs 3年均值: {{ historyTrend[item.key].deviation_pct > 0 ? '+' : '' }}{{ historyTrend[item.key].deviation_pct?.toFixed(1) }}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -100,9 +111,20 @@
             >ROE {{ roeRank.label }}</el-tag>
           </div>
           <div class="metric-cards">
-            <div class="metric-card" v-for="item in profitabilityMetrics" :key="item.name">
-              <div class="metric-label">{{ item.name }}</div>
-              <div class="metric-value" :style="{ color: item.color }">{{ item.value }}</div>
+            <div class="metric-card" v-for="item in profitabilityMetrics" :key="item.key">
+              <div class="metric-item">
+                <span class="metric-label">{{ item.name }}</span>
+                <span class="metric-value" :style="{ color: item.color }">{{ item.value }}</span>
+                <div class="metric-compare" v-if="sectorComp && sectorComp[item.key]">
+                  <span>行业均值: {{ sectorComp[item.key].sector_avg?.toFixed(1) }}</span>
+                  <span class="best">龙头: {{ sectorComp[item.key].sector_best?.name }} {{ sectorComp[item.key].sector_best?.value?.toFixed(1) }}</span>
+                </div>
+                <div class="metric-trend" v-if="historyTrend && historyTrend[item.key]">
+                  <span :class="getTrendClass(item.key, historyTrend[item.key].deviation_pct)">
+                    vs 3年均值: {{ historyTrend[item.key].deviation_pct > 0 ? '+' : '' }}{{ historyTrend[item.key].deviation_pct?.toFixed(1) }}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -116,9 +138,20 @@
             <h2 class="section-title">成长性</h2>
           </div>
           <div class="metric-cards">
-            <div class="metric-card" v-for="item in growthMetrics" :key="item.name">
-              <div class="metric-label">{{ item.name }}</div>
-              <div class="metric-value" :style="{ color: item.color }">{{ item.value }}</div>
+            <div class="metric-card" v-for="item in growthMetrics" :key="item.key">
+              <div class="metric-item">
+                <span class="metric-label">{{ item.name }}</span>
+                <span class="metric-value" :style="{ color: item.color }">{{ item.value }}</span>
+                <div class="metric-compare" v-if="sectorComp && sectorComp[item.key]">
+                  <span>行业均值: {{ sectorComp[item.key].sector_avg?.toFixed(1) }}</span>
+                  <span class="best">龙头: {{ sectorComp[item.key].sector_best?.name }} {{ sectorComp[item.key].sector_best?.value?.toFixed(1) }}</span>
+                </div>
+                <div class="metric-trend" v-if="historyTrend && historyTrend[item.key]">
+                  <span :class="getTrendClass(item.key, historyTrend[item.key].deviation_pct)">
+                    vs 3年均值: {{ historyTrend[item.key].deviation_pct > 0 ? '+' : '' }}{{ historyTrend[item.key].deviation_pct?.toFixed(1) }}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -132,12 +165,87 @@
             <h2 class="section-title">财务健康</h2>
           </div>
           <div class="metric-cards">
-            <div class="metric-card" v-for="item in healthMetrics" :key="item.name">
-              <div class="metric-label">{{ item.name }}</div>
-              <div class="metric-value" :style="{ color: item.color }">{{ item.value }}</div>
+            <div class="metric-card" v-for="item in healthMetrics" :key="item.key">
+              <div class="metric-item">
+                <span class="metric-label">{{ item.name }}</span>
+                <span class="metric-value" :style="{ color: item.color }">{{ item.value }}</span>
+                <div class="metric-compare" v-if="sectorComp && sectorComp[item.key]">
+                  <span>行业均值: {{ sectorComp[item.key].sector_avg?.toFixed(1) }}</span>
+                  <span class="best">龙头: {{ sectorComp[item.key].sector_best?.name }} {{ sectorComp[item.key].sector_best?.value?.toFixed(1) }}</span>
+                </div>
+                <div class="metric-trend" v-if="historyTrend && historyTrend[item.key]">
+                  <span :class="getTrendClass(item.key, historyTrend[item.key].deviation_pct)">
+                    vs 3年均值: {{ historyTrend[item.key].deviation_pct > 0 ? '+' : '' }}{{ historyTrend[item.key].deviation_pct?.toFixed(1) }}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- 同业对比 -->
+      <div class="peer-section" v-if="peers && peers.length > 0">
+        <div class="section-header">
+          <div class="section-icon peer-icon">
+            <el-icon><User /></el-icon>
+          </div>
+          <h2 class="section-title">同业对比</h2>
+          <el-tag type="info" size="small" class="rank-badge">
+            {{ sectorMap[stockInfo.sector] || stockInfo.sector || '' }} - {{ stockInfo.sub_sector || '' }}
+          </el-tag>
+        </div>
+        <el-table
+          :data="peers"
+          style="width: 100%"
+          :row-class-name="peerRowClassName"
+          size="small"
+          stripe
+          class="peer-table"
+        >
+          <el-table-column prop="name" label="股票名称" min-width="120">
+            <template #default="{ row }">
+              <span :class="{ 'current-stock-name': row.symbol === stockInfo.symbol }">
+                {{ row.name }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="pe_ttm" label="PE-TTM" width="100" align="right">
+            <template #default="{ row }">
+              <span :class="{ 'best-value': isBestPeerValue('pe_ttm', row.pe_ttm, true) }">
+                {{ fmt(row.pe_ttm) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="roe" label="ROE(%)" width="100" align="right">
+            <template #default="{ row }">
+              <span :class="{ 'best-value': isBestPeerValue('roe', row.roe, false) }">
+                {{ fmt(row.roe) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="gross_margin" label="毛利率(%)" width="110" align="right">
+            <template #default="{ row }">
+              <span :class="{ 'best-value': isBestPeerValue('gross_margin', row.gross_margin, false) }">
+                {{ fmt(row.gross_margin) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="revenue_growth_3y" label="营收增速(%)" width="120" align="right">
+            <template #default="{ row }">
+              <span :class="{ 'best-value': isBestPeerValue('revenue_growth_3y', row.revenue_growth_3y, false) }">
+                {{ fmtPct(row.revenue_growth_3y) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="debt_to_equity" label="资产负债率(%)" width="130" align="right">
+            <template #default="{ row }">
+              <span :class="{ 'best-value': isBestPeerValue('debt_to_equity', row.debt_to_equity, true) }">
+                {{ fmt(row.debt_to_equity) }}
+              </span>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
 
       <!-- 综合评分 -->
@@ -217,19 +325,84 @@
     </div>
 
     <el-empty v-else-if="!loading" description="暂无数据" />
+
+    <!-- 信息源浮动按钮 -->
+    <div class="source-fab" @click="sourceDrawerVisible = true">
+      <el-icon :size="24"><Reading /></el-icon>
+    </div>
+
+    <!-- 信息源抽屉 -->
+    <el-drawer
+      v-model="sourceDrawerVisible"
+      title="信息源"
+      direction="rtl"
+      size="420px"
+      :before-close="handleDrawerClose"
+    >
+      <el-tabs v-model="activeSourceTab" @tab-change="handleSourceTabChange">
+        <el-tab-pane label="全部" name="all" />
+        <el-tab-pane label="财报" name="financial_report" />
+        <el-tab-pane label="研报" name="research_report" />
+        <el-tab-pane label="新闻" name="news" />
+        <el-tab-pane label="博主观点" name="blogger" />
+      </el-tabs>
+      <div class="source-list" v-loading="sourceLoading">
+        <div
+          class="source-card"
+          v-for="item in sourceList"
+          :key="item.id"
+          :class="'sentiment-border-' + (item.sentiment || 'neutral')"
+        >
+          <div class="source-title">{{ item.title }}</div>
+          <div class="source-meta">
+            <span class="source-name">{{ item.source }}</span>
+            <span class="source-time">{{ formatTime(item.publish_time) }}</span>
+          </div>
+          <div class="source-summary">{{ item.summary }}</div>
+          <el-tag
+            :type="getSentimentType(item.sentiment)"
+            size="small"
+            class="source-sentiment"
+          >{{ getSentimentLabel(item.sentiment) }}</el-tag>
+        </div>
+        <el-empty v-if="!sourceLoading && sourceList.length === 0" description="暂无信息" />
+      </div>
+      <div class="source-pagination" v-if="sourceTotal > sourcePageSize">
+        <el-pagination
+          small
+          layout="prev, pager, next"
+          :total="sourceTotal"
+          :page-size="sourcePageSize"
+          v-model:current-page="sourcePage"
+          @current-change="handleSourcePageChange"
+        />
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Coin, TrendCharts, DataLine, FirstAidKit, User } from '@element-plus/icons-vue'
+import { Coin, TrendCharts, DataLine, FirstAidKit, User, Reading } from '@element-plus/icons-vue'
 import { stockApi, analystApi } from '../api'
 
 const route = useRoute()
 const loading = ref(false)
 const stockInfo = ref(null)
 const analystViews = ref([])
+
+// ---------- 新增响应式数据 ----------
+const sectorComp = ref(null)
+const peers = ref([])
+const historyTrend = ref(null)
+const sourceDrawerVisible = ref(false)
+const sourceLoading = ref(false)
+const sourceList = ref([])
+const sourceTotal = ref(0)
+const sourcePage = ref(1)
+const sourcePageSize = ref(10)
+const activeSourceTab = ref('all')
 
 const sectorMap = {
   semiconductor: '半导体',
@@ -243,6 +416,12 @@ const sectorMap = {
 const fmt = (v) => {
   if (v === null || v === undefined) return '-'
   return Number(v).toFixed(2)
+}
+
+const fmtPct = (v) => {
+  if (v === null || v === undefined) return '-'
+  const prefix = v >= 0 ? '+' : ''
+  return prefix + Number(v).toFixed(2) + '%'
 }
 
 const fmtVolume = (v) => {
@@ -275,6 +454,22 @@ const fmtPercent = (v) => {
   return Number(v).toFixed(2) + '%'
 }
 
+const formatTime = (isoString) => {
+  if (!isoString) return '-'
+  const d = new Date(isoString)
+  if (isNaN(d.getTime())) return isoString
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  // 如果是今年则省略年份
+  if (yyyy === new Date().getFullYear()) {
+    return `${mm}-${dd} ${hh}:${mi}`
+  }
+  return `${yyyy}-${mm}-${dd}`
+}
+
 // 涨跌颜色（中国市场惯例：红涨绿跌）
 const growthColor = (v) => {
   if (v === null || v === undefined) return '#909399'
@@ -285,6 +480,26 @@ const growthValue = (v) => {
   if (v === null || v === undefined) return '-'
   const prefix = v >= 0 ? '+' : ''
   return prefix + Number(v).toFixed(2) + '%'
+}
+
+// ---------- 越低越好的指标判断 ----------
+
+const isLowerBetter = (metricKey) => {
+  const lowerSet = ['pe_ttm', 'pb', 'ps_ttm', 'ev_ebitda', 'pcf', 'debt_ratio', 'debt_to_equity']
+  return lowerSet.includes(metricKey)
+}
+
+// ---------- 趋势颜色逻辑 ----------
+
+const getTrendClass = (metricKey, deviationPct) => {
+  if (deviationPct === null || deviationPct === undefined) return ''
+  const lower = isLowerBetter(metricKey)
+  if (lower) {
+    // 越低越好：高于均值(正值)是坏的(红色)，低于均值(负值)是好的(绿色)
+    return deviationPct > 0 ? 'trend-up' : 'trend-down'
+  }
+  // 越高越好：高于均值(正值)是好的(绿色)，低于均值(负值)是坏的(红色)
+  return deviationPct > 0 ? 'trend-down' : 'trend-up'
 }
 
 // ---------- PE 评级 ----------
@@ -309,39 +524,108 @@ const roeRank = computed(() => {
   return { label: '较弱', type: 'danger' }
 })
 
-// ---------- 四大指标区域 ----------
+// ---------- 四大指标区域（带 key） ----------
 
 const d = computed(() => stockInfo.value || {})
 
 const valuationMetrics = computed(() => [
-  { name: 'PE-TTM', value: fmt(d.value.pe_ttm), color: '#303133' },
-  { name: 'PB', value: fmt(d.value.pb), color: '#303133' },
-  { name: 'PS-TTM', value: fmt(d.value.ps_ttm), color: '#303133' },
-  { name: 'EV/EBITDA', value: fmt(d.value.ev_ebitda), color: '#303133' },
-  { name: 'PCF', value: fmt(d.value.pcf), color: '#303133' }
+  { key: 'pe_ttm', name: 'PE-TTM', value: fmt(d.value.pe_ttm), color: '#303133' },
+  { key: 'pb', name: 'PB', value: fmt(d.value.pb), color: '#303133' },
+  { key: 'ps_ttm', name: 'PS-TTM', value: fmt(d.value.ps_ttm), color: '#303133' },
+  { key: 'ev_ebitda', name: 'EV/EBITDA', value: fmt(d.value.ev_ebitda), color: '#303133' },
+  { key: 'pcf', name: 'PCF', value: fmt(d.value.pcf), color: '#303133' }
 ])
 
 const profitabilityMetrics = computed(() => [
-  { name: 'ROE', value: fmtPercent(d.value.roe), color: growthColor(d.value.roe) },
-  { name: 'ROA', value: fmtPercent(d.value.roa), color: growthColor(d.value.roa) },
-  { name: '毛利率', value: fmtPercent(d.value.gross_margin), color: growthColor(d.value.gross_margin) },
-  { name: '净利率', value: fmtPercent(d.value.net_margin), color: growthColor(d.value.net_margin) },
-  { name: '营业利润率', value: fmtPercent(d.value.operating_margin), color: growthColor(d.value.operating_margin) }
+  { key: 'roe', name: 'ROE', value: fmtPercent(d.value.roe), color: growthColor(d.value.roe) },
+  { key: 'roa', name: 'ROA', value: fmtPercent(d.value.roa), color: growthColor(d.value.roa) },
+  { key: 'gross_margin', name: '毛利率', value: fmtPercent(d.value.gross_margin), color: growthColor(d.value.gross_margin) },
+  { key: 'net_margin', name: '净利率', value: fmtPercent(d.value.net_margin), color: growthColor(d.value.net_margin) },
+  { key: 'operating_margin', name: '营业利润率', value: fmtPercent(d.value.operating_margin), color: growthColor(d.value.operating_margin) }
 ])
 
 const growthMetrics = computed(() => [
-  { name: '营收增速(3年)', value: growthValue(d.value.revenue_growth_3y), color: growthColor(d.value.revenue_growth_3y) },
-  { name: '利润增速(3年)', value: growthValue(d.value.profit_growth_3y), color: growthColor(d.value.profit_growth_3y) },
-  { name: '营收增速(5年)', value: growthValue(d.value.revenue_growth_5y), color: growthColor(d.value.revenue_growth_5y) },
-  { name: '利润增速(5年)', value: growthValue(d.value.profit_growth_5y), color: growthColor(d.value.profit_growth_5y) }
+  { key: 'revenue_growth_3y', name: '营收增速(3年)', value: growthValue(d.value.revenue_growth_3y), color: growthColor(d.value.revenue_growth_3y) },
+  { key: 'profit_growth_3y', name: '利润增速(3年)', value: growthValue(d.value.profit_growth_3y), color: growthColor(d.value.profit_growth_3y) },
+  { key: 'revenue_growth_5y', name: '营收增速(5年)', value: growthValue(d.value.revenue_growth_5y), color: growthColor(d.value.revenue_growth_5y) },
+  { key: 'profit_growth_5y', name: '利润增速(5年)', value: growthValue(d.value.profit_growth_5y), color: growthColor(d.value.profit_growth_5y) }
 ])
 
 const healthMetrics = computed(() => [
-  { name: '流动比率', value: fmt(d.value.current_ratio), color: '#303133' },
-  { name: '速动比率', value: fmt(d.value.quick_ratio), color: '#303133' },
-  { name: '资产负债率', value: fmtPercent(d.value.debt_ratio), color: '#303133' },
-  { name: '利息保障倍数', value: fmt(d.value.interest_coverage), color: '#303133' }
+  { key: 'current_ratio', name: '流动比率', value: fmt(d.value.current_ratio), color: '#303133' },
+  { key: 'quick_ratio', name: '速动比率', value: fmt(d.value.quick_ratio), color: '#303133' },
+  { key: 'debt_ratio', name: '资产负债率', value: fmtPercent(d.value.debt_ratio), color: '#303133' },
+  { key: 'interest_coverage', name: '利息保障倍数', value: fmt(d.value.interest_coverage), color: '#303133' }
 ])
+
+// ---------- 同业对比辅助 ----------
+
+const peerRowClassName = ({ row }) => {
+  if (row.symbol === stockInfo.value?.symbol) return 'current-peer-row'
+  return ''
+}
+
+const isBestPeerValue = (field, value, lowerBetter) => {
+  if (value === null || value === undefined) return false
+  const list = peers.value.filter(p => p[field] !== null && p[field] !== undefined)
+  if (list.length === 0) return false
+  const best = lowerBetter
+    ? Math.min(...list.map(p => p[field]))
+    : Math.max(...list.map(p => p[field]))
+  return Number(value) === Number(best)
+}
+
+// ---------- 信息源辅助 ----------
+
+const getSentimentType = (sentiment) => {
+  if (sentiment === 'positive') return 'success'
+  if (sentiment === 'negative') return 'danger'
+  return 'info'
+}
+
+const getSentimentLabel = (sentiment) => {
+  if (sentiment === 'positive') return '正面'
+  if (sentiment === 'negative') return '负面'
+  return '中性'
+}
+
+const handleDrawerClose = (done) => {
+  done()
+}
+
+const handleSourceTabChange = (tab) => {
+  sourcePage.value = 1
+  fetchSources(tab)
+}
+
+const handleSourcePageChange = (page) => {
+  fetchSources(activeSourceTab.value, page)
+}
+
+const fetchSources = async (sourceType, page) => {
+  sourceLoading.value = true
+  try {
+    const symbol = route.params.symbol
+    const params = {
+      page: page || sourcePage.value,
+      page_size: sourcePageSize.value
+    }
+    if (sourceType && sourceType !== 'all') {
+      params.source_type = sourceType
+    }
+    const res = await stockApi.getSources(symbol, params)
+    if (res.code === 200 && res.data) {
+      sourceList.value = res.data.list || []
+      sourceTotal.value = res.data.total || 0
+    }
+  } catch (error) {
+    console.error('获取信息源失败:', error)
+    sourceList.value = []
+    sourceTotal.value = 0
+  } finally {
+    sourceLoading.value = false
+  }
+}
 
 // ---------- 评分算法 ----------
 
@@ -564,18 +848,38 @@ const getRatingType = (rating) => {
   return 'info'
 }
 
-// ---------- 数据获取 ----------
+// ---------- 数据获取（并行请求） ----------
 
-const fetchStockDetail = async () => {
+const fetchAllData = async () => {
   loading.value = true
   try {
     const symbol = route.params.symbol
-    const res = await stockApi.getStockDetail(symbol)
-    if (res.code === 200 && res.data) {
-      stockInfo.value = res.data
+    const [detailRes, compRes, peersRes, trendRes, sourcesRes] = await Promise.all([
+      stockApi.getStockDetail(symbol).catch(e => { console.error('获取股票详情失败:', e); return null }),
+      stockApi.getSectorComparison(symbol).catch(e => { console.error('获取行业对比失败:', e); return null }),
+      stockApi.getPeers(symbol).catch(e => { console.error('获取同业数据失败:', e); return null }),
+      stockApi.getHistoryTrend(symbol).catch(e => { console.error('获取历史趋势失败:', e); return null }),
+      stockApi.getSources(symbol, { page: 1, page_size: 10 }).catch(e => { console.error('获取信息源失败:', e); return null })
+    ])
+
+    if (detailRes && detailRes.code === 200 && detailRes.data) {
+      stockInfo.value = detailRes.data
+    }
+    if (compRes && compRes.code === 200 && compRes.data) {
+      sectorComp.value = compRes.data
+    }
+    if (peersRes && peersRes.code === 200 && peersRes.data) {
+      peers.value = Array.isArray(peersRes.data) ? peersRes.data : []
+    }
+    if (trendRes && trendRes.code === 200 && trendRes.data) {
+      historyTrend.value = trendRes.data
+    }
+    if (sourcesRes && sourcesRes.code === 200 && sourcesRes.data) {
+      sourceList.value = sourcesRes.data.list || []
+      sourceTotal.value = sourcesRes.data.total || 0
     }
   } catch (error) {
-    console.error('获取股票详情失败:', error)
+    console.error('获取数据失败:', error)
   } finally {
     loading.value = false
   }
@@ -594,7 +898,7 @@ const fetchAnalystViews = async () => {
 }
 
 onMounted(() => {
-  fetchStockDetail()
+  fetchAllData()
   fetchAnalystViews()
 })
 </script>
@@ -602,6 +906,7 @@ onMounted(() => {
 <style scoped>
 .stock-detail-page {
   padding: 0;
+  position: relative;
 }
 
 .detail-content {
@@ -798,6 +1103,11 @@ onMounted(() => {
   color: white;
 }
 
+.peer-icon {
+  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+  color: white;
+}
+
 .analyst-icon {
   background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
   color: white;
@@ -837,6 +1147,11 @@ onMounted(() => {
   transform: translateY(-2px);
 }
 
+.metric-item {
+  display: flex;
+  flex-direction: column;
+}
+
 .metric-label {
   font-size: 13px;
   color: #909399;
@@ -848,6 +1163,67 @@ onMounted(() => {
   font-weight: 700;
   margin-bottom: 4px;
   font-family: 'Monaco', 'Menlo', monospace;
+}
+
+/* 行业对比 & 历史趋势 */
+.metric-compare {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.metric-compare .best {
+  color: #b0b8c4;
+}
+
+.metric-trend {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.metric-trend .trend-up {
+  color: #f56c6c;
+}
+
+.metric-trend .trend-down {
+  color: #67c23a;
+}
+
+/* 同业对比 */
+.peer-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.peer-section .section-header {
+  margin-bottom: 16px;
+}
+
+.peer-table {
+  font-size: 13px;
+}
+
+.peer-table :deep(.current-peer-row) {
+  background-color: #f0f5ff !important;
+}
+
+.peer-table :deep(.current-peer-row td) {
+  background-color: #f0f5ff !important;
+}
+
+.current-stock-name {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.best-value {
+  font-weight: 700;
+  color: #67c23a;
 }
 
 /* 综合评分 */
@@ -1003,6 +1379,106 @@ onMounted(() => {
   padding: 8px 0;
 }
 
+/* 信息源浮动按钮 */
+.source-fab {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s;
+  z-index: 100;
+}
+
+.source-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(102, 126, 234, 0.6);
+}
+
+/* 信息源抽屉 */
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 200px;
+}
+
+.source-card {
+  padding: 14px;
+  border-radius: 8px;
+  background: #f9fafb;
+  border-left: 3px solid #dcdfe6;
+  transition: background 0.2s;
+}
+
+.source-card:hover {
+  background: #f0f2f5;
+}
+
+.source-card.sentiment-border-positive {
+  border-left-color: #67c23a;
+}
+
+.source-card.sentiment-border-negative {
+  border-left-color: #f56c6c;
+}
+
+.source-card.sentiment-border-neutral {
+  border-left-color: #dcdfe6;
+}
+
+.source-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.source-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.source-name {
+  font-size: 12px;
+  color: #909399;
+}
+
+.source-time {
+  font-size: 12px;
+  color: #b0b8c4;
+}
+
+.source-summary {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.source-sentiment {
+  margin-top: 4px;
+}
+
+.source-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .metrics-container {
@@ -1026,6 +1502,13 @@ onMounted(() => {
   .rating-detail {
     flex-wrap: wrap;
     gap: 16px;
+  }
+
+  .source-fab {
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
   }
 }
 </style>

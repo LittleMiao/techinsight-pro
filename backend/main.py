@@ -11,7 +11,7 @@ from datetime import date
 from database import engine, Base, get_db
 from models import *
 from schemas import *
-from analyst_service import AnalystService, SimulationService, StockService
+from analyst_service import AnalystService, SimulationService, StockService, ReferenceService
 from init_data import init_database
 
 # 创建表
@@ -146,6 +146,42 @@ def get_stock_detail(symbol: str, db: Session = Depends(get_db)):
     if not data:
         raise HTTPException(status_code=404, detail="股票不存在")
     return StockDetailResponse(data=data)
+
+
+# ==================== 参考数据API ====================
+
+@app.get("/api/v1/stocks/{symbol}/sector-comparison")
+def get_sector_comparison(symbol: str, db: Session = Depends(get_db)):
+    """获取股票行业板块对比数据"""
+    data = ReferenceService.get_sector_comparison(db, symbol)
+    if not data:
+        raise HTTPException(status_code=404, detail="股票不存在")
+    return {"code": 200, "data": data}
+
+
+@app.get("/api/v1/stocks/{symbol}/peers")
+def get_peers(symbol: str, db: Session = Depends(get_db)):
+    """获取同细分行业同行对比"""
+    data = ReferenceService.get_peers(db, symbol)
+    if not data:
+        raise HTTPException(status_code=404, detail="股票不存在")
+    return {"code": 200, "data": data}
+
+
+@app.get("/api/v1/stocks/{symbol}/history-trend")
+def get_history_trend(symbol: str, db: Session = Depends(get_db)):
+    """获取历史指标趋势"""
+    data = ReferenceService.get_history_trend(db, symbol)
+    if not data:
+        raise HTTPException(status_code=404, detail="股票不存在")
+    return {"code": 200, "data": data}
+
+
+@app.get("/api/v1/stocks/{symbol}/sources")
+def get_sources(symbol: str, source_type: Optional[str] = None, page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=50), db: Session = Depends(get_db)):
+    """获取信息源列表"""
+    data = ReferenceService.get_sources(db, symbol, source_type, page, page_size)
+    return {"code": 200, "data": data}
 
 
 # ==================== 健康检查 ====================

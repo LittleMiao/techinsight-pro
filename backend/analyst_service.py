@@ -3,7 +3,7 @@
 """
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from models import AnalystFramework, AnalystJudgment, SimulatedAnalysis, Stock, FinancialIndicator, StockQuote
+from models import AnalystFramework, AnalystJudgment, SimulatedAnalysis, Stock, FinancialIndicator, StockQuote, HistoricalIndicator, InformationSource
 from schemas import *
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date
@@ -492,3 +492,225 @@ class StockService:
             })
 
         return result
+
+
+class ReferenceService:
+    """参考数据服务 - 行业对比、同行分析、历史趋势、信息源"""
+
+    @staticmethod
+    def get_sector_comparison(db: Session, symbol: str):
+        """获取股票与行业板块的对比数据"""
+        stock = db.query(Stock).filter(Stock.symbol == symbol).first()
+        if not stock:
+            return None
+
+        # 获取当前股票的最新财务指标
+        current_indicator = db.query(FinancialIndicator).filter(
+            FinancialIndicator.symbol == symbol
+        ).order_by(desc(FinancialIndicator.report_date)).first()
+
+        if not current_indicator:
+            return None
+
+        # 查询同板块所有股票的最新财务指标
+        sector_stocks = db.query(Stock).filter(Stock.sector == stock.sector).all()
+
+        # 获取每只股票的最新财务指标
+        sector_indicators = []
+        for s in sector_stocks:
+            ind = db.query(FinancialIndicator).filter(
+                FinancialIndicator.symbol == s.symbol
+            ).order_by(desc(FinancialIndicator.report_date)).first()
+            if ind:
+                sector_indicators.append((s, ind))
+
+        if not sector_indicators:
+            return None
+
+        # 定义需要对比的指标
+        # lower_is_better: pe_ttm, pb, ps_ttm, debt_to_equity
+        # higher_is_better: roe, gross_margin, net_margin, operating_margin, revenue_growth_3y
+        metrics_config = {
+            "pe_ttm": {"label": "市盈率(TTM)", "lower_is_better": True},
+            "pb": {"label": "市净率", "lower_is_better": True},
+            "ps_ttm": {"label": "市销率(TTM)", "lower_is_better": True},
+            "roe": {"label": "净资产收益率", "lower_is_better": False},
+            "gross_margin": {"label": "毛利率", "lower_is_better": False},
+            "net_margin": {"label": "净利率", "lower_is_better": False},
+            "operating_margin": {"label": "营业利润率", "lower_is_better": False},
+            "revenue_growth_3y": {"label": "营收3年复合增长率", "lower_is_better": False},
+            "debt_to_equity": {"label": "资产负债率", "lower_is_better": True},
+        }
+
+        result = {}
+        for metric_key, config in metrics_config.items():
+            current_value = getattr(current_indicator, metric_key, None)
+
+            # 收集同板块该指标的有效值
+            values = []
+            for s, ind in sector_indicators:
+                val = getattr(ind, metric_key, None)
+                if val is not None:
+                    values.append((s.name, s.symbol, val))
+
+            if not values:
+                result[metric_key] = {
+                    "label": config["label"],
+                    "current": current_value,
+                    "sector_avg": None,
+                    "sector_best": None,
+                }
+                continue
+
+            # 计算板块平均值
+            sector_avg = sum(v[2] for v in values) / len(values)
+
+            # 找出板块最优
+            if config["lower_is_better"]:
+                best = min(values, key=lambda x: x[2])
+            else:
+                best = max(values, key=lambda x: x[2])
+
+            result[metric_key] = {
+                "label": config["label"],
+                "current": current_value,
+                "sector_avg": round(sector_avg, 2),
+                "sector_best": {
+                    "name": best[0],
+                    "symbol": best[1],
+                    "value": best[2],
+                },
+            }
+
+        return result
+
+    @staticmethod
+    def get_peers(db: Session, symbol: str):
+        """获取同细分行业同行对比"""
+        stock = db.query(Stock).filter(Stock.symbol == symbol).first()
+        if not stock:
+            return None
+
+        # 查询同细分行业的股票
+        peers = db.query(Stock).filter(Stock.sub_sector == stock.sub_sector).all()
+
+        result = []
+        for s in peers:
+            # 获取最新财务指标
+            ind = db.query(FinancialIndicator).filter(
+                FinancialIndicator.symbol == s.symbol
+            ).order_by(desc(FinancialIndicator.report_date)).first()
+
+            # 计算市值
+            market_cap = None
+            if s.total_shares and s.quote and s.quote.current_price:
+                market_cap = s.total_shares * s.quote.current_price
+
+            result.append({
+                "symbol": s.symbol,
+                "name": s.name,
+                "pe_ttm": ind.pe_ttm if ind else None,
+                "roe": ind.roe if ind else None,
+                "gross_margin": ind.gross_margin if ind else None,
+                "revenue_growth_3y": ind.revenue_growth_3y if ind else None,
+                "debt_to_equity": ind.debt_to_equity if ind else None,
+                "market_cap": market_cap,
+            })
+
+        # 按市值降序排列，限制8个
+        result.sort(key=lambda x: x["market_cap"] if x["market_cap"] is not None else 0, reverse=True)
+        return result[:8]
+
+    @staticmethod
+    def get_history_trend(db: Session, symbol: str):
+        """获取历史指标趋势 - 与3年均值对比"""
+        # 获取当前财务指标
+        current_indicator = db.query(FinancialIndicator).filter(
+            FinancialIndicator.symbol == symbol
+        ).order_by(desc(FinancialIndicator.report_date)).first()
+
+        if not current_indicator:
+            return None
+
+        # 查询历史指标
+        historical_records = db.query(HistoricalIndicator).filter(
+            HistoricalIndicator.symbol == symbol
+        ).all()
+
+        if not historical_records:
+            return None
+
+        # 定义需要计算趋势的指标
+        metrics = [
+            "pe_ttm", "pb", "ps_ttm", "roe", "roa",
+            "gross_margin", "net_margin", "operating_margin",
+            "revenue_growth_3y", "profit_growth_3y",
+            "debt_to_equity", "current_ratio",
+        ]
+
+        result = {}
+        for metric in metrics:
+            current_value = getattr(current_indicator, metric, None)
+
+            # 收集历史有效值
+            hist_values = []
+            for h in historical_records:
+                val = getattr(h, metric, None)
+                if val is not None:
+                    hist_values.append(val)
+
+            if not hist_values:
+                result[metric] = {
+                    "current": current_value,
+                    "avg_3y": None,
+                    "deviation_pct": None,
+                }
+                continue
+
+            avg_3y = sum(hist_values) / len(hist_values)
+
+            # 计算偏离度
+            if avg_3y != 0:
+                deviation_pct = round((current_value - avg_3y) / abs(avg_3y) * 100, 2) if current_value is not None else None
+            else:
+                deviation_pct = None
+
+            result[metric] = {
+                "current": current_value,
+                "avg_3y": round(avg_3y, 2),
+                "deviation_pct": deviation_pct,
+            }
+
+        return result
+
+    @staticmethod
+    def get_sources(db: Session, symbol: str, source_type: Optional[str] = None, page: int = 1, page_size: int = 10):
+        """获取信息源列表（分页）"""
+        query = db.query(InformationSource).filter(InformationSource.symbol == symbol)
+
+        if source_type:
+            query = query.filter(InformationSource.source_type == source_type)
+
+        total = query.count()
+        sources = query.order_by(desc(InformationSource.publish_time)) \
+            .offset((page - 1) * page_size) \
+            .limit(page_size) \
+            .all()
+
+        return {
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "list": [
+                {
+                    "id": s.id,
+                    "source_type": s.source_type,
+                    "title": s.title,
+                    "source": s.source,
+                    "publish_time": s.publish_time,
+                    "summary": s.summary,
+                    "sentiment": s.sentiment,
+                }
+                for s in sources
+            ],
+        }
